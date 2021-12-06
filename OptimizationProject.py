@@ -16,14 +16,20 @@ from matplotlib.patches import Polygon
 import matplotlib.path as mpath
 
 #Indexed Sets
-R = 8 #number of retail centers
-W = 4 #number of warehouses
-P = 5 #number of plants
-Y = 10 #number of years
+R = range(8) #number of retail centers
+W = range(4) #number of warehouses
+P = range(5) #number of plants
+Y = range(10) #number of years
 
 #Retailers Data
 RetailDemand1 = [1000,1200,1800,1200,1000,1400,1600,1000] #Demand Year 1
 DemandGrowthRate = [0.2,0.2,0.25,0.2,0.2,0.25,0.25,0.2] #yearly demand growth rates 
+D = []
+for i in Y:
+    temp = []
+    for j in R:
+        temp.append(RetailDemand1[j]*((1+DemandGrowthRate[j])**i))
+    D.append(temp)
 
 #Plant Data
 Capacity = [16000,12000,14000,10000,13000] #in units
