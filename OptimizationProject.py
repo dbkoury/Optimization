@@ -85,7 +85,11 @@ CostGrowthRate = 0.03
 
 #Flugels sent from warehouses to each retail center must sum to the demand of that retail center each year
 
-#Each plant can acquire at most 60000 pounds of alloy
+#Flugels sent from warehouses to each retail center must not exceed flugels sent from all plants to that warehouse each year
+
+#Each plant can acquire at most 60000 pounds of alloy i.e number of flugels made by plant cannot exceed necessary allow limit
+
+#Constraints for warehouse shutdowns and whatnot
 
 #Output
     #NOTE: I would recommend a breakdown of the yearly costs, production numbers, warehouse storage numbers, and shipping numbers using these tables:
