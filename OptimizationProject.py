@@ -183,12 +183,12 @@ for i in Y:
     RD.append(temp)
         
     #Shutdown Binary
-CD = []
+SD = []
 for i in Y:
     temp = []
     for j in P:
         temp.append(LpVariable(f'SDY{i}P{j}', cat="Binary"))
-    CD.append(temp)
+    SD.append(temp)
         
 #Widget Cost Structure Variables:
     #Curve Segments for each plant in each year
@@ -284,7 +284,7 @@ for i in Y: #for each year
         for j in W: #across all warehouses
             globals()[f'TotalInventoryY{i}R{k}'] += WRF[i][j][k]
         #total flugels received by retailer must meet demand each year
-        prob += globals()[f'TotalInventoryY{i}R{k}'] = D[i][k]
+        prob += globals()[f'TotalInventoryY{i}R{k}'] == D[i][k]
 
     #Construction Binary Constraints
 for j in P: # for each p
@@ -316,7 +316,7 @@ TotalWRSC = 0
 for i in Y:
     for j in W:
         for k in R:
-            TotalWRSC += PWSC[i][j][k]*WRF[i][j][k]
+            TotalWRSC += WRSC[i][j][k]*WRF[i][j][k]
             
     #Plant Costs - Operating
 TotalOperating = 0
@@ -346,7 +346,7 @@ for i in Y:
 TotalWidget = 0
 for i in Y:
     for j in P:
-        TotalWidget += 0*Lambda1 + ((WTD/WPF)*OWC[i])*Lambda2 + ((WTD/WPF)*OWC[i] + (PC[j] - (WTD/WPF))*DWC[i])*Lambda3
+        TotalWidget += 0*L1[i][j] + ((WTD/WPF)*OWC[i])*L2[i][j] + ((WTD/WPF)*OWC[i] + (PC[j] - (WTD/WPF))*DWC[i])*L3[i][j]
         
 #Sum the costs
 
@@ -358,30 +358,11 @@ print(f"status={LpStatus[status]}")
         
         
 
-#Variables
-
-#Whether or not to use plant that year, which will impact construction, operating and shutdown costs
 
 #NOTE: I think a node illustration would be good
 
-#How many flugels to send from plant p to warehouse w each year
-
-#How many flugels to send from warehouse w to retail center r each year
 
 
-#Constraints
-
-#Flugels sent from each plant to warehouses must sum to less than or equal to the production capacity of that plant each year
-
-#Flugels sent from plant to each warehouse must sum to less than or equal to the yearly average flugel capacity of that warehouse each year
-
-#Flugels sent from warehouses to each retail center must sum to the demand of that retail center each year
-
-#Flugels sent from warehouses to each retail center must not exceed flugels sent from all plants to that warehouse each year
-
-#Each plant can acquire at most 60000 pounds of alloy i.e number of flugels made by plant cannot exceed necessary allow limit
-
-#Constraints for warehouse shutdowns and whatnot
 
 #Output
     #NOTE: I would recommend a breakdown of the yearly costs, production numbers, warehouse storage numbers, and shipping numbers using these tables:
