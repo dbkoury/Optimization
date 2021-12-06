@@ -28,7 +28,7 @@ D = []
 for i in Y:
     temp = []
     for j in R:
-        temp.append(RetailDemand1[j]*(1+DemandGrowthRate[j])**i) #creating matrix of yearly costs
+        temp.append(RetailDemand1[j]+(RetailDemand1[j]*DemandGrowthRate[j]*i)) #creating matrix of yearly costs
     D.append(temp)
 
 C = 0.03 #cost growth rate
@@ -142,7 +142,7 @@ for i in Y:
     for j in P:
         temp2 = []
         for k in W:
-            temp2.append(LpVariable(f'Y{i}P{j}W{k}',0,PC[j])) #non-negative and cannot exceed total plant capacity but constraint will have to be dealt with on sum as well
+            temp2.append(LpVariable(f'FY{i}P{j}W{k}',0,PC[j])) #non-negative and cannot exceed total plant capacity but constraint will have to be dealt with on sum as well
         temp.append(temp2)
     PWF.append(temp)
     
@@ -153,9 +153,17 @@ for i in Y:
     for j in W:
         temp2 = []
         for k in R:
-            temp2.append(LpVariable(f'Y{i}W{j}R{k}',0,FMax)) #non-negative and cannot exceed total warehouse but constraint will have to be dealt with on sum as well
+            temp2.append(LpVariable(f'FY{i}W{j}R{k}',0,FMax)) #non-negative and cannot exceed total warehouse but constraint will have to be dealt with on sum as well
         temp.append(temp2)
     WRF.append(temp)
+    
+      #Remaining flugel inventory numbers for warehouse W in year Y
+EI = []
+for i in Y:
+    temp = []
+    for j in W:
+        temp.append(LpVariable(f'EIY{i}W{j}',0,FMax)) #non-negative and cannot exceed total warehouse capacity but also dealt with in constraints
+    EI.append(temp)
     
 #Plant Variables:
     #Operating Binary
@@ -261,20 +269,30 @@ for i in Y: #for each year
         #Shutdowncosts only exist if plant not operating this year but had been operating the year before
         if i > 0: #Shutdown not possible for zero year since no prior value available and cant go out of range and more contextually business did not exist
             prob += SD[i][j] >= O[i-1][j] - O[i][j]
-        #Construction 
+        
         
     #Shipping Constraints - Warehouses
 for i in Y: #for each year
     for k in W: #and each warehouse
         globals()[f'TotalStorageY{i}W{k}'] = 0 #Warehouse storage by plant
         globals()[f'TotalOutputY{i}W{k}'] = 0  #warehouse output by retailer
-        for j in P: #sum by plant
+        for j in P: #sum by plant shipments
             globals()[f'TotalStorageY{i}W{k}'] += PWF[i][j][k]
         #total flugels received by warehouse does not exceed avg. yearly flugel storage capacity
         prob += globals()[f'TotalStorageY{i}W{k}'] <= FMax
+        if i > 0: #year 0 cannot have prior inventory and deal with list out of range, but other years do
+            globals()[f'TotalStorageY{i}W{k}'] += EI[i-1][k] #inflow plus remaining inventory
+        #Average inventory cannot exceed inventory maximum capacity
+        if i == 0: #year 1 has no prior inventory, must be dealt with separately
+            prob += 0.5*EI[i][k] <= IMax #average will be (0 + end inventory)/2
+        else: #all other years do have remaining inventory
+            prob += 0.5*EI[i-1][k] + 0.5*EI[i][k] <= IMax #average of starting and ending inventory cannot exceed 4000
         for j in R: #sum by retailer
             globals()[f'TotalOutputY{i}W{k}'] += WRF[i][k][j]
-        #flow into warehouse must be equivalent to flow out of warehouse
+        #Total flugels sent out of warehouse must not exceed avg yearly flugel storage capacity
+        prob += globals()[f'TotalOutputY{i}W{k}'] <= FMax
+        globals()[f'TotalOutputY{i}W{k}'] += + EI[i][k] #total outflow includes sent to retailers plus remaining inventory
+        #flow into warehouse must be equivalent to flow out of warehouse (and inventory level differences)
         prob += globals()[f'TotalStorageY{i}W{k}'] == globals()[f'TotalOutputY{i}W{k}']
         
     #Shipping Constraints - Retail Centers
