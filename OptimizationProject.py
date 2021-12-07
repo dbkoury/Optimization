@@ -8,11 +8,11 @@ Created on Fri Dec  3 20:08:28 2021
 #Team 2: Anoushka Mahar, Riti Dabas, Dylan Koury
 
 from gurobipy import *
-from pulp import LpVariable, LpProblem, LpMaximize, LpStatus, value, LpMinimize
+from pulp import LpVariable, LpProblem, LpMaximize, LpStatus, value, LpMinimize, lpSum
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as pat
-from matplotlib.patches import Polygon
+from matplotlib.patches import Polygon, ConnectionPatch
 import matplotlib.path as mpath
 
 #Indexed Sets
@@ -372,12 +372,76 @@ prob += TotalAlloyCosts + TotalPWSC + TotalWRSC + TotalOperating + TotalConstruc
         
 status = prob.solve()
 
-print(f"status={LpStatus[status]}")        
-        
-        
+print(f"status={LpStatus[status]}")   
 
 
-#NOTE: I think a node illustration would be good
+#create graph of supply chain nodes
+    
+Pcolors = ['lightblue','lightgreen','lightpink','yellow','thistle']     
+Wcolors= ['blue','green','red','purple']
+
+for i in Y:
+    fig,ax = plt.subplots()
+    plt.ylim(0,520)
+    plt.xlim(0,720)
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.axes.xaxis.set_visible(False)
+    ax.axes.yaxis.set_visible(False)
+    
+    for j in P:
+        Production = 0
+        for k in W:
+            Production += (abs(PWF[i][j][k].varValue)/PC[j])
+            if PWF[i][j][k].varValue > 0:
+                globals()[f"conY{i}P{j}W{k}"] = ConnectionPatch(xyA=(170 + 40,470-(100*j)), xyB=(360-35,460-(130*k)), coordsA='data',coordsB='data',arrowstyle="->", shrinkB=0,axesA=ax,axesB=ax)
+                ax.add_artist(globals()[f"conY{i}P{j}W{k}"])
+        plt.pie([Production,1-Production], colors=[Pcolors[j], 'white'], radius=40,normalize=True,center=(170,470-(100*j)), wedgeprops={'clip_on':True, 'linewidth': .7, 'edgecolor':'black'},frame=True)
+        circle6 = plt.Circle([170,470-(100*j)],radius= 40, color='black', fill=False)
+        ax.add_artist(circle6)
+        ax.text(40,500-(100*j), f"Plant {j+1}", size=5, ha="center", va = "center", weight='bold')
+        ax.text(40,480-(100*j), f"Units Produced:\n{round(Production*PC[j])}", size=4.5, ha="center", va = "center")
+        ax.text(40,450-(100*j), f"Percent Capacity:\n{round(Production*100)}%", size=4.5, ha="center", va="center")
+    
+    for j in W:
+        Inventory = []
+        for k in P:
+            Inventory.append(abs(PWF[i][k][j].varValue)/(FMax+IMax))
+        if i > 0:
+            Inventory.append(EI[i-1][j].varValue/(FMax+IMax))
+        else:
+            Inventory.append(0)
+        plt.pie(Inventory, colors=['lightblue','lightgreen','lightpink','yellow','thistle','gray','white'], radius=35,normalize=False,center=(360,460-(130*j)), wedgeprops={'clip_on':True, 'linewidth': .7, 'edgecolor': Wcolors[j]},frame=True)
+        circle6 = plt.Circle([360,460-(130*j)],radius= 35, color=Wcolors[j], fill=False)
+        ax.add_artist(circle6)
+        ax.text(360,510-(130*j), f"Warehouse {j+1}", size=5, ha="center", va = "center", weight='bold')
+        ax.text(360,415-(130*j), f"Units Stored: {round(sum(Inventory)*(FMax+IMax))}", size=4.5, ha="center", va = "center")
+        ax.text(360,400-(130*j), f"Percent Capacity: {round(sum(Inventory)*100)}%", size=4.5, ha="center", va="center")
+    
+
+
+    for j in R:
+        DemandFulfill = []
+        for k in W:
+            DemandFulfill.append(WRF[i][k][j].varValue/D[i][j])
+            if WRF[i][k][j].varValue > 0:
+                globals()[f"conY{i}R{j}W{k}"] = ConnectionPatch(xyA=(360+35,460-(130*k)), xyB=(575-28,480-(64*j)), coordsA='data',coordsB='data',arrowstyle="->", shrinkB=0,axesA=ax,axesB=ax)
+                ax.add_artist(globals()[f"conY{i}R{j}W{k}"])
+        plt.pie(DemandFulfill, colors=Wcolors, radius=28,normalize=False,center=(575,480-(64*j)), wedgeprops={'clip_on':True, 'linewidth': .7, 'edgecolor':'black'},frame=True)
+        circle6 = plt.Circle([575,480-(64*j)],radius= 28, color='black', fill=False)
+        ax.add_artist(circle6)
+        ax.text(670,510-(64*j), f"Retail Center {j+1}", size=5, ha="center", va = "center", weight='bold')
+        ax.text(670,490-(64*j), f"Units Demanded:\n{round(D[i][j])}", size=4.5, ha="center", va = "center")
+        ax.text(670,465-(64*j), f"Percent Fulfuilled:\n{round(sum(DemandFulfill)*100)}%", size=4.5, ha="center", va="center")
+    
+    
+    
+    plt.title(f"Flugel Supply Chain Year {i + 1}", size=10)
+    
+    plt.show
+
 
 
 
@@ -401,8 +465,5 @@ print(f"status={LpStatus[status]}")
         
     #An analysis of the results and perhaps some interesting conclusions and recommendations would be a good idea
     #Given that the results are time series, some time series line graphs would also be interesting tracking costs
-    
-    #I know this isnt technically what they recommend but perhaps we make each node in a flow chart a pie graph so that way we can conceptualize capacity and what numbers come from where
-    #I actually think it could look really cool and would be hella fun to code imo
 
 
