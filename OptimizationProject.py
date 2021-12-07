@@ -306,9 +306,11 @@ for i in Y: #for each year
 
     #Construction Binary Constraints
 for j in P: # for each p
-    YearsofOperation = 0 #Plant not operational yet
     for i in Y: #loop through years
-        YearsofOperation += O[i][j] #if not operation, 0 is added, otherwise 1 year is added
+        if i==0:
+            YearsofOperation = 0 #Plant not operational yet
+        else:
+            YearsofOperation += O[i-1][j] #if not operation, 0 is added, otherwise 1 year is added
         #Plant only in construction if operational this year, but never any in the past. i.e. "Years of Operation" is 0
         prob += CD[i][j] >= O[i][j] - YearsofOperation
         
@@ -316,63 +318,102 @@ for j in P: # for each p
     #minimizes total cost of meeting expected demand over the next 10 years
 #Cost summations
     #Alloy Costs
+TAC = []
 TotalAlloyCosts = 0
 for i in Y:
+    temp = []
     for j in P:
+        temp2 = []
         for k in W:
             TotalAlloyCosts += PWF[i][j][k]*APF*AC[i]
+            temp2.append(PWF[i][j][k]*APF*AC[i])
+        temp.append(temp2)   
+    TAC.append(temp)
 
     #Shipping Costs - Plant to Warehouse
 TotalPWSC = 0
+TPWSC = []
 for i in Y:
+    temp = []
     for j in P:
+        temp2 = []
         for k in W:
             TotalPWSC += PWSC[i][j][k]*PWF[i][j][k]
+            temp2.append(PWSC[i][j][k]*PWF[i][j][k])
+        temp.append(temp2)   
+    TPWSC.append(temp)
             
     #Shipping Costs - Warehouse to Retailer
 TotalWRSC = 0
+TWRSC = []
 for i in Y:
+    temp = []
     for j in W:
+        temp2 = []
         for k in R:
             TotalWRSC += WRSC[i][j][k]*WRF[i][j][k]
-            
+            temp2.append(WRSC[i][j][k]*WRF[i][j][k])
+        temp.append(temp2)   
+    TWRSC.append(temp)
+        
     #Plant Costs - Operating
 TotalOperating = 0
+TO = []
 for i in Y:
+    temp = []
     for j in P:
         TotalOperating += O[i][j]*OC[i][j]
+        temp.append(O[i][j]*OC[i][j])
+    TO.append(temp)
         
     #Plant Costs - Construction
 TotalConstruction = 0
+TC = []
 for i in Y:
+    temp = []
     for j in P:
         TotalConstruction += CD[i][j]*CC[i][j]
+        temp.append(CD[i][j]*CC[i][j])
+    TC.append(temp)
         
     #Plant Costs - Reopening
 TotalReopening = 0
+TR = []
 for i in Y:
+    temp = []
     for j in P:
         TotalReopening += RD[i][j]*RC[i][j]
+        temp.append(RD[i][j]*RC[i][j])
+    TR.append(temp)
         
     #Plant Costs - Shutdown
 TotalShutdown = 0
+TS = []
 for i in Y:
+    temp = []
     for j in P:
         TotalShutdown += SD[i][j]*SC[i][j]
+        temp.append(SD[i][j]*SC[i][j])
+    TS.append(temp)
         
     #Widget Costs (formula derived on formulation sheet)
 TotalWidget = 0
+TW = []
 for i in Y:
+    temp = []
     for j in P:
         TotalWidget += 0*L1[i][j] + ((WTD/WPF)*OWC[i])*L2[i][j] + ((WTD/WPF)*OWC[i] + (PC[j] - (WTD/WPF))*DWC[i])*L3[i][j]
+        temp.append(0*L1[i][j] + ((WTD/WPF)*OWC[i])*L2[i][j] + ((WTD/WPF)*OWC[i] + (PC[j] - (WTD/WPF))*DWC[i])*L3[i][j])
+    TW.append(temp)
         
 #Sum the costs
-
-prob += TotalAlloyCosts + TotalPWSC + TotalWRSC + TotalOperating + TotalConstruction + TotalReopening + TotalShutdown + TotalWidget
+objective = TotalAlloyCosts + TotalPWSC + TotalWRSC + TotalOperating + TotalConstruction + TotalReopening + TotalShutdown + TotalWidget
+prob += objective
         
 status = prob.solve()
 
 print(f"status={LpStatus[status]}")   
+print(f"Cost=${round(value(objective)*1000,2)}") 
 
 
 #create graph of supply chain nodes
@@ -394,11 +435,11 @@ for i in Y:
     for j in P:
         Production = 0
         for k in W:
-            Production += (abs(PWF[i][j][k].varValue)/PC[j])
+            Production += (abs(round(PWF[i][j][k].varValue))/PC[j])
             if PWF[i][j][k].varValue > 0:
                 globals()[f"conY{i}P{j}W{k}"] = ConnectionPatch(xyA=(170 + 40,470-(100*j)), xyB=(360-35,460-(130*k)), coordsA='data',coordsB='data',arrowstyle="->", shrinkB=0,axesA=ax,axesB=ax)
                 ax.add_artist(globals()[f"conY{i}P{j}W{k}"])
-        plt.pie([Production,1-Production], colors=[Pcolors[j], 'white'], radius=40,normalize=True,center=(170,470-(100*j)), wedgeprops={'clip_on':True, 'linewidth': .7, 'edgecolor':'black'},frame=True)
+        plt.pie([Production,1-Production], colors=[Pcolors[j], 'white'], radius=40,normalize=False,center=(170,470-(100*j)), wedgeprops={'clip_on':True, 'linewidth': .7, 'edgecolor':'black'},frame=True)
         circle6 = plt.Circle([170,470-(100*j)],radius= 40, color='black', fill=False)
         ax.add_artist(circle6)
         ax.text(40,500-(100*j), f"Plant {j+1}", size=5, ha="center", va = "center", weight='bold')
@@ -436,14 +477,73 @@ for i in Y:
         ax.text(670,490-(64*j), f"Units Demanded:\n{round(D[i][j])}", size=4.5, ha="center", va = "center")
         ax.text(670,465-(64*j), f"Percent Fulfuilled:\n{round(sum(DemandFulfill)*100)}%", size=4.5, ha="center", va="center")
     
-    
+    ax.text(0,0,"Total Cost:",size=8, weight = 'bold')
+    YearlyCost = str(round(value(lpSum(TAC[i] + TPWSC[i] + TWRSC[i] + TO[i] + TC[i] + TR[i] + TS[i] + TW[i])))*1000)
+    ax.text(120,0,f"${YearlyCost[:-6]},{YearlyCost[-6:-3]},{YearlyCost[-3:]}",size=8)
     
     plt.title(f"Flugel Supply Chain Year {i + 1}", size=10)
     
     plt.show
 
+#Demand Chart
+RColors = ['red','orange','black','green','blue','purple','pink','brown']
+fig,ax = plt.subplots()
+plt.ylim(0,7000)
+plt.xlim(1,11)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+DLegend = []
+for i in R:
+    DLegend.append(pat.Patch(color=RColors[i], label=f"{i+1}"))
+    for j in Y: 
+        if j == 0:
+            continue
+        elif j == max(Y):
+            con = ConnectionPatch(xyA=(j,D[j-1][i]), xyB=(j+1,D[j][i]), coordsA='data',coordsB='data',arrowstyle="->", shrinkB=0,axesA=ax,axesB=ax, color = RColors[i])
+            ax.add_artist(con)
+            ax.text(j+1.2,D[j][i],str(round(D[j][i])),size=8)
+        else:
+            con = ConnectionPatch(xyA=(j,D[j-1][i]), xyB=(j+1,D[j][i]), coordsA='data',coordsB='data',arrowstyle='-', shrinkB=0,axesA=ax,axesB=ax, color = RColors[i])
+            ax.add_artist(con)
+ax.legend(loc="upper left", handles=DLegend,title="Retail Centers",prop={'size': 7})
+ax.set_xlabel("Year")
+ax.set_ylabel("Demand (units)")
+plt.title("Projected Flugel Demand")
 
 
+#Plant Cost Charts 
+PColors = ['red','orange','green','blue','purple']
+RValues = [TO,TS,TR,TC]
+PValues = [OC,SC,RC,CC]
+CTitles = ["Operating","Shutdown","Reopening","Construction"]
+for i in range(len(PValues)):
+    fig,ax = plt.subplots()
+    ax.set_xticks(range(1,11))
+    plt.xlim(1,11)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    Legend = []
+    Legend.append(pat.Patch(color='black', label=f"Realized"))
+    for j in P:
+        Legend.append(pat.Patch(color=PColors[j], label=f"Plant {j+1}"))
+        line = []
+        for k in Y: 
+            line.append(PValues[i][k][j])
+        plt.plot(range(1,11),line,c=PColors[j],ls='-')
+    line = []
+    for k in Y:
+        line.append(value(lpSum(RValues[i][k])))
+    plt.plot(range(1,11),line,c='black',ls='-')
+    ax.legend(loc=[.05,.75], handles=Legend,prop={'size': 7})
+    ax.set_xlabel("Year")
+    ax.set_ylabel("Cost (1000s of $)")
+    Total = str(round(value(lpSum(RValues[i]))*1000))
+    if len(Total) > 6:
+        plt.title(f"Projected/Realized {CTitles[i]} Costs\n${Total[:-6]},{Total[-6:-3]},{Total[-3:]}")
+    else:
+        plt.title(f"Projected/Realized {CTitles[i]} Costs\n${Total[-6:-3]},{Total[-3:]}")
+
+    
 
 
 #Output
@@ -458,6 +558,10 @@ for i in Y:
             #Reopening Costs
             #ShutDown Costs
             #Total Costs
+            
+#Schedule for plant operation and construction and shutdown and reopening
+#Bar graph showing percentages of costs per year 
+#tables with numbers of production, shipping, resource buying, storage numbers 
         
         #Shipping Costs and number shipped in a grid with plants and warehouses with a total bar grouped by plant
         
