@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as pat
 from matplotlib.patches import Polygon, ConnectionPatch
 import matplotlib.path as mpath
+import numpy as np
 
 #Indexed Sets
 R = range(8) #number of retail centers
@@ -542,9 +543,43 @@ for i in range(len(PValues)):
         plt.title(f"Projected/Realized {CTitles[i]} Costs\n${Total[:-6]},{Total[-6:-3]},{Total[-3:]}")
     else:
         plt.title(f"Projected/Realized {CTitles[i]} Costs\n${Total[-6:-3]},{Total[-3:]}")
-
+    plt.show
     
+#Cost bar chart
+Costs =  [TAC,TPWSC ,TWRSC, TO, TC ,TR , TS , TW]
+label = ['Alloy Cost','P2W Shipping', 'W2R Shipping','Operations','Construction','Reopening Cost','Shutdown Cost','Widget Cost']
+fig,ax = plt.subplots()
+plt.ylim(0,5000)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+colors = ['red','blue','orange','green','yellow','purple','brown','pink']
+heightsold = [0,0,0,0,0,0,0,0,0,0]
+width = .8
+ticks = []
+CLegend = []
+Means = []
 
+for j in range(len(Costs)):
+    CLegend.append(pat.Patch(color=colors[j], label=label[j]))
+    heightsnew = []
+    ticks = []
+    for i in Y:
+        ticks.append(f"{i+1}")
+        heightsnew.append(value(lpSum(Costs[j][i])))
+    ax.bar(ticks, value(lpSum(Costs[j][i])), width=width, bottom = heightsold, label=label[j])
+    heightsold = heightsnew
+    Means.append(sum(heightsold)/len(heightsold))
+Total = str(round(value(objective)*1000))
+if len(Total) > 6:
+    plt.title(f"Yearly Flugel Production Cost Strategy\n${Total[:-6]},{Total[-6:-3]},{Total[-3:]}")
+else:
+    plt.title(f"Yearly Flugel Production Cost Strategy\n${Total[-6:-3]},{Total[-3:]}")
+ax.set_xlabel("Year")
+ax.set_ylabel("Cost (1000s of $)")
+ax.legend(loc=[.03,.7],title="Cost Type",prop={'size': 6})
+#plt.axhline(sum(Means)/len(Means), color='k')
+plt.show
+    
 
 #Output
     #NOTE: I would recommend a breakdown of the yearly costs, production numbers, warehouse storage numbers, and shipping numbers using these tables:
