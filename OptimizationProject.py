@@ -249,6 +249,7 @@ for i in Y: #for each year
         prob += L2[i][j] <= A1[i][j] + A2[i][j] #Close to discount number accessible in both segments of cost structure
         prob += L3[i][j] <= A2[i][j] #Max production may only be possible in discount segment
         prob += A1[i][j] + A2[i][j] == 1 #only one segment can be selected
+            
 
     #Shipping Constraints - Plants
 for i in Y: #for each year
@@ -260,6 +261,8 @@ for i in Y: #for each year
         prob += globals()[f'TotalSupplyY{i}P{j}'] <= PC[j] 
         #They can also not exceed the limitations of alloys available for purchase required to make them
         prob += globals()[f'TotalSupplyY{i}P{j}'] <= (APPMax/APF)
+        #Also set equal to widget cost structure
+        prob += 0*(L1[i][j])+(WTD/WPF)*(L2[i][j])+PC[j]*(L3[i][j]) == globals()[f'TotalSupplyY{i}P{j}']
         #Operation costs only exist if plant is producing flugels
         prob += O[i][j]*PC[j] >= PWF[i][j]
         #Reopening costs only exist if plant operating this year but not the year before
@@ -421,7 +424,7 @@ print(f"Cost=${round(value(objective)*1000,2)}")
     
 Pcolors = ['lightblue','lightgreen','lightpink','yellow','thistle']     
 Wcolors= ['blue','green','red','purple']
-
+YCost = []
 for i in Y:
     fig,ax = plt.subplots()
     plt.ylim(0,520)
@@ -480,6 +483,7 @@ for i in Y:
     
     ax.text(0,0,"Total Cost:",size=8, weight = 'bold')
     YearlyCost = str(round(value(lpSum(TAC[i] + TPWSC[i] + TWRSC[i] + TO[i] + TC[i] + TR[i] + TS[i] + TW[i])))*1000)
+    YCost.append(int(YearlyCost))  
     ax.text(120,0,f"${YearlyCost[:-6]},{YearlyCost[-6:-3]},{YearlyCost[-3:]}",size=8)
     
     plt.title(f"Flugel Supply Chain Year {i + 1}", size=10)
@@ -549,7 +553,7 @@ for i in range(len(PValues)):
 Costs =  [TAC,TPWSC ,TWRSC, TO, TC ,TR , TS , TW]
 label = ['Alloy Cost','P2W Shipping', 'W2R Shipping','Operations','Construction','Reopening Cost','Shutdown Cost','Widget Cost']
 fig,ax = plt.subplots()
-plt.ylim(0,5000)
+plt.ylim(0,12000)
 ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 colors = ['red','blue','orange','green','yellow','purple','brown','pink']
@@ -557,7 +561,6 @@ heightsold = [0,0,0,0,0,0,0,0,0,0]
 width = .8
 ticks = []
 CLegend = []
-Means = []
 
 for j in range(len(Costs)):
     CLegend.append(pat.Patch(color=colors[j], label=label[j]))
@@ -566,9 +569,9 @@ for j in range(len(Costs)):
     for i in Y:
         ticks.append(f"{i+1}")
         heightsnew.append(value(lpSum(Costs[j][i])))
-    ax.bar(ticks, value(lpSum(Costs[j][i])), width=width, bottom = heightsold, label=label[j])
-    heightsold = heightsnew
-    Means.append(sum(heightsold)/len(heightsold))
+    ax.bar(ticks, heightsnew, width=width, bottom = heightsold, label=label[j])
+    for i in Y:
+        heightsold[i] += heightsnew[i]
 Total = str(round(value(objective)*1000))
 if len(Total) > 6:
     plt.title(f"Yearly Flugel Production Cost Strategy\n${Total[:-6]},{Total[-6:-3]},{Total[-3:]}")
@@ -576,8 +579,8 @@ else:
     plt.title(f"Yearly Flugel Production Cost Strategy\n${Total[-6:-3]},{Total[-3:]}")
 ax.set_xlabel("Year")
 ax.set_ylabel("Cost (1000s of $)")
-ax.legend(loc=[.03,.7],title="Cost Type",prop={'size': 6})
-#plt.axhline(sum(Means)/len(Means), color='k')
+ax.legend(loc=[.15,.72],title="Cost Type",prop={'size': 5})
+plt.axhline(sum(YCost)/1000/len(YCost), color='k')
 plt.show
     
 
