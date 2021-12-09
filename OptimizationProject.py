@@ -780,7 +780,8 @@ for i in range(len(Used)):
         ax.text(140,65, s=f"Alloy (lbs)", size=9, ha="center", va="center", wrap=True,weight='bold')
         plt.arrow(170,68,0,-83, width=.1,color="black",head_width=None)
         ax.text(200,65, s=f"Widgets", size=9, ha="center", va="center", wrap=True,weight='bold')
-
+        ax.text(15,71, s=f"Capacity:", size=11, va="center", wrap=True, weight='bold')
+        ax.text(55,71, s=f"{PC[i]}", size=11, va="center", wrap=True)
         for j in Y:
             ax.text(30,58-(j*7), s=f"{j+1}", size=9, ha="center", va="center", wrap=True)
             plt.arrow(-10,55-(j*7),280,0, width=.1,color="black",head_width=None)
